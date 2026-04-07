@@ -1,0 +1,487 @@
+**PRACTICAL 1**
+
+**AIM**: Implementation of a basic Document Retrieval System using an Inverted Index in Python
+
+from collections import defaultdict
+
+
+class InvertedIndex:
+    def __init__(self, documents):
+        self.documents = documents
+        self.index = defaultdict(list)
+        self.build_index()
+
+    def build_index(self):
+        for doc_id, text in self.documents.items():
+            document_words = set(text.lower().split())
+            for word in document_words:
+                self.index[word].append(doc_id)
+
+    def search(self, query):
+        query_words = query.lower().split()
+
+        if not query_words:
+            return set()
+        result_sets = [set(self.index[word]) for word in query_words if word in self.index]
+
+        if not result_sets:
+            return set()
+        return set.intersection(*result_sets)
+
+
+documents = {
+    1: "Web content extraction involves retrieving structured data",
+    2: "Search engines use document indexing for efficient retrieval",
+    3: "Document retrieval is important in web mining applications",
+    4: "Indexing helps in retrieving relevant documents based on query terms"
+}
+
+
+index = InvertedIndex(documents)
+
+
+print("Inverted Index Dictionary")
+print("-" * 35)
+for word in sorted(index.index):
+    print(f"{word:<15} → {sorted(index.index[word])}")
+
+
+queries = ["retrieval", "document indexing", "web mining", "structured data"]
+
+
+print("\nQuery Search Results")
+print("-" * 35)
+for query in queries:
+    result = index.search(query)
+    print(f"Query       : {query}")
+    print(f"Documents   → {sorted(list(result)) if result else 'No matching documents!'}\n")
+
+-----------------------------------------------------------------------------------------------------
+
+# **PRACTICAL 2**
+
+**AIM**: Implementation of Retrieval Models (Boolean Retrieval Model & Vector Space Model)
+
+from collections import defaultdict
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+
+class BooleanRetrieval:
+  def __init__(self, documents):
+    self.documents = documents
+    self.inverted_index = defaultdict(set)
+    self.build_index()
+
+  def build_index(self):
+    for doc_id, text in self.documents.items():
+      words = set(text.lower().split())
+      for word in words:
+        self.inverted_index[word].add(doc_id)
+
+  def boolean_search(self, query):
+    terms = query.lower().split()
+    result_set = set(self.documents.keys())
+
+    operation = "AND"
+    for term in terms:
+      if term == "and":
+        operation = "AND"
+      elif term == "or":
+        operation = "OR"
+      elif term == "not":
+        operation = "NOT"
+      else:
+        if operation == "AND":
+          result_set &= self.inverted_index.get(term, set())
+        elif operation == "OR":
+          result_set |= self.inverted_index.get(term, set())
+        elif operation == "NOT":
+          result_set -= self.inverted_index.get(term, set())
+    return result_set
+
+
+class VectorSpaceModel:
+  def __init__(self, documents):
+    self.documents = documents
+    self.vectorizer = TfidfVectorizer()
+    self.doc_ids = list(documents.keys())
+    self.doc_vectors = self.vectorizer.fit_transform(documents.values())
+
+  def vector_search(self, query):
+    query_vector = self.vectorizer.transform([query])
+    similarities = (query_vector @ self.doc_vectors.T).toarray().flatten()
+    ranked_results = sorted(zip(self.doc_ids, similarities), key=lambda x: x[1], reverse=True)
+    return ranked_results
+
+
+documents = {
+    1: "Web content extraction involves retrieving structured data",
+    2: "Search engines use document indexing for efficient retrieval",
+    3: "Document retrieval is important in web mining applications",
+    4: "Indexing helps in retrieving relevant documents based on query terms"
+}
+
+
+boolean_index = BooleanRetrieval(documents)
+boolan_queries = ["retrieval AND document", "document OR indexing", "retrieval NOT indexing"]
+
+print("=== Boolean Retrieval Results ===")
+for query in boolan_queries:
+  results = boolean_index.boolean_search(query)
+  print(f"Query: {query}")
+  print(f"Documents   → {sorted(list(results)) if results else 'No matching documents!'}\n")
+
+
+vector_index = VectorSpaceModel(documents)
+vector_queries = ["document retrieval", "web mining", "structured data"]
+
+print("=== Vector Space Retrieval Results ===")
+for query in vector_queries:
+  results = vector_index.vector_search(query)
+  print(f"Query: {query}")
+  print(f"Ranked Documents   → {[(doc, round(float(score), 4)) for doc, score in results if score > 0]}\n")
+
+-----------------------------------------------------------------------------------------------------------------
+
+# **PRACTICAL 3**
+
+**AIM**: Implementation of Evaluation Metrics for IR Systems (Precision, Recall, F1-Score)
+
+def calculate_precision(tp, fp):
+  if tp + fp == 0:
+    return 0.0
+  return tp / (tp + fp)
+
+
+def calculate_recall(tp, fn):
+  if tp + fn == 0:
+    return 0.0
+  return tp / (tp + fn)
+
+
+def calculate_f1_score(precision, recall):
+  if precision + recall == 0:
+    return 0.0
+  return 2 * (precision * recall) / (precision + recall)
+
+
+def evaluate_retrieval(relevant_docs, retrieved_docs):
+  tp = len(relevant_docs & retrieved_docs)
+  fp = len(retrieved_docs - relevant_docs)
+  fn = len(relevant_docs - retrieved_docs)
+
+  precision = calculate_precision(tp, fp)
+  recall = calculate_recall(tp, fn)
+
+  f1_score = calculate_f1_score(precision, recall)
+  return tp, fp, fn, precision, recall, f1_score
+
+
+relevant_documents = {1,2,3,5,7}
+retrieved_documents = {1,2,4,5,6}
+
+tp, fp, fn, precision, recall, f1_score = evaluate_retrieval(relevant_documents, retrieved_documents)
+
+
+print("=== Evaluation Metrics for Information Retrieval ===")
+print(f"True Positives (TP): {tp}")
+print(f"False Positives (FP): {fp}")
+print(f"False Negatives (FN): {fn}")
+print(f"Precision: {precision:.4f}")
+print(f"Recall: {recall:.4f}")
+print(f"F1-Score: {f1_score:.4f}")
+
+-------------------------------------------------------------------------------------------------------
+
+# **PRACTICAL 4**
+
+**AIM**: Text Categorization using Naive Bayes & SVM
+
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
+import numpy as np
+from sklearn.datasets import fetch_20newsgroups
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, classification_report
+
+
+categories = ['alt.atheism', 'rec.motorcycles', 'comp.graphics', 'sci.med']
+newsgroups = fetch_20newsgroups(
+    subset='all',
+    categories=categories,
+    remove=('headers', 'footers', 'quotes')
+)
+
+
+vectorizer = TfidfVectorizer(stop_words='english')
+X = vectorizer.fit_transform(newsgroups.data)
+y = newsgroups.target
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+
+nb_classifier = MultinomialNB()
+nb_classifier.fit(X_train, y_train)
+y_pred_nb = nb_classifier.predict(X_test)
+
+
+svm_classifier = SVC(kernel='linear')
+svm_classifier.fit(X_train, y_train)
+y_pred_svm = svm_classifier.predict(X_test)
+
+
+print("=== Naive Bayes Classifier Performance ===")
+print(f"Accuracy: {accuracy_score(y_test, y_pred_nb):.4f}")
+print("Classification Report: \n", classification_report(y_test, y_pred_nb, target_names=categories))
+
+print("\n=== Support Vector Machine (SVM) Classifier Performance ===")
+print(f"Accuracy: {accuracy_score(y_test, y_pred_svm):.4f}")
+print("Classification Report: \n", classification_report(y_test, y_pred_svm, target_names=categories))
+
+----------------------------------------------------------------------------------------------------------
+
+# **PRACTICAL 5**
+
+**AIM**: Implementation of Page Ranking Algorithm
+
+import numpy as np
+
+
+def initialize_pagerank(graph):
+  num_nodes = len(graph)
+  return {node: 1 / num_nodes for node in graph}
+
+
+def compute_pagerank(graph, damping_factor=0.85, max_iterations=100, tolerance=1e-6):
+  num_nodes = len(graph)
+  pagerank = initialize_pagerank(graph)
+  new_pagerank = pagerank.copy()
+
+  for _ in range(max_iterations):
+    for node in graph:
+      new_pagerank[node] = (1 - damping_factor) / num_nodes + damping_factor * sum(
+          pagerank[incoming] / len(graph[incoming]) for incoming in graph if node in graph[incoming]
+      )
+
+    if all(new_pagerank[node] - pagerank[node] < tolerance for node in graph):
+      break
+    pagerank = new_pagerank.copy()
+
+  return pagerank
+
+
+web_graph = {
+  'A': {'B', 'C'},
+  'B': {'C'},
+  'C': {'A'},
+  'D': {'C'}
+ }
+
+
+pagerank_scores = compute_pagerank(web_graph)
+
+
+print("=== PageRank Scores ===")
+for page, score in sorted(pagerank_scores.items(), key=lambda x: x[1], reverse=True):
+  print(f"Page {page}: {score:.6f}")
+
+-----------------------------------------------------------------------------------------------------------
+
+# **PRACTICAL 6**
+**AIM**: Spelling correction in Information Retrieval Systems using Levenshtein Distance Method
+
+from collections import defaultdict
+import numpy as np
+
+
+class InvertedIndex:
+    def __init__(self, documents):
+        self.documents = documents
+        self.index = defaultdict(set)
+        self.vocabulary = set()
+        self.build_index()
+
+
+    def build_index(self):
+      for doc_id, text in self.documents.items():
+        words = set(text.lower().split())
+        self.vocabulary.update(words)
+        for word in words:
+          self.index[word].add(doc_id)
+
+
+    def search(self, query):
+      corrected_words = [self.correct_spelling(word) for word in query.lower().split()]
+      print(f"Corrected Query → {' '.join(corrected_words)}")
+      result_sets = [self.index[word] for word in corrected_words if word in self.index]
+      return set.intersection(*result_sets) if result_sets else set()
+
+
+    def correct_spelling(self, word):
+      min_distance = float('inf')
+      best_match = word
+      for vocab_word in self.vocabulary:
+        distance = self.levenshtein_distance(word, vocab_word)
+        if distance < min_distance:
+          min_distance = distance
+          best_match = vocab_word
+      return best_match
+
+
+    def levenshtein_distance(self, s1, s2):
+      len_s1, len_s2 = len(s1), len(s2)
+      dp = np.zeros((len_s1 + 1, len_s2 + 1), dtype=int)
+      for i in range(len_s1 + 1):
+        for j in range(len_s2 + 1):
+          if i == 0:
+            dp[i][j] = j
+          elif j == 0:
+            dp[i][j] = i
+          elif s1[i -1] == s2[j - 1]:
+            dp[i][j] = dp[i - 1][j -1]
+          else:
+            dp[i][j] = 1 + min(dp[i - 1][j], # Deletion
+                               dp[i][j - 1], # Insertion
+                               dp[i - 1][j - 1]) # Substitution
+
+      return dp[len_s1][len_s2]
+
+
+documents = {
+    1: "Web content extraction involves retrieving structured data",
+    2: "Search engines use document indexing for efficient retrieval",
+    3: "Document retrieval is important in web mining applications",
+    4: "Indexing helps in retrieving relevant documents based on query terms"
+}
+
+
+index = InvertedIndex(documents)
+
+
+queries = ["retrievel", "documnt indexing", "web minng", "strctured data"]
+
+
+print("===Spelling Correction and Document Retrieval===")
+for query in queries:
+    print("")
+    print("Original Query :", query)
+
+    result = index.search(query)
+
+    print("Matching Documents →", sorted(result) if result else "No matching documents")
+
+-------------------------------------------------------------------------------------------------------------------
+
+# **PRACTICAL 7**
+**AIM**: Clustering for Information Retrieval using K-means & Hierarchical Clustering.
+
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
+# Import necessary libraries
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.datasets import fetch_20newsgroups  # Load 20 Newsgroups dataset
+from sklearn.feature_extraction.text import TfidfVectorizer  # Convert text to TF-IDF features
+from sklearn.cluster import KMeans, AgglomerativeClustering  # K-Means & Hierarchical clustering
+from sklearn.metrics import silhouette_score  # Evaluate clustering performance
+from scipy.cluster.hierarchy import dendrogram, linkage  # Hierarchical clustering visualization
+
+# Load a subset of 20 Newsgroups dataset (4 categories for simplicity)
+categories = ['alt.atheism', 'soc.religion.christian', 'comp.graphics', 'sci.med']
+newsgroups = fetch_20newsgroups(subset='all', categories=categories, remove=('headers', 'footers',
+'quotes'))
+
+# Convert text data into numerical format using TF-IDF vectorization
+vectorizer = TfidfVectorizer(stop_words='english', max_features=1000)  # Limit features for efficiency
+X = vectorizer.fit_transform(newsgroups.data)  # Transform text into TF-IDF vectors
+
+# ---------------- K-MEANS CLUSTERING ----------------
+# Define number of clusters (same as number of categories)
+num_clusters = len(categories)
+
+# Perform K-Means clustering
+kmeans = KMeans(n_clusters=num_clusters, random_state=42, n_init=10)
+kmeans_labels = kmeans.fit_predict(X)  # Assign clusters
+
+# Compute silhouette score to evaluate clustering performance
+silhouette_avg = silhouette_score(X, kmeans_labels)
+
+# Display K-Means results
+print("\n=== K-Means Clustering Results ===")
+print(f"Number of Clusters: {num_clusters}")
+print(f"Silhouette Score: {silhouette_avg:.4f}")
+
+# ---------------- HIERARCHICAL CLUSTERING ----------------
+# Perform Agglomerative Hierarchical clustering
+hierarchical = AgglomerativeClustering(n_clusters=num_clusters, linkage='ward') # Remove affinity parameter
+hierarchical_labels = hierarchical.fit_predict(X.toarray())  # Convert sparse matrix to array
+
+# Plot dendrogram for hierarchical clustering
+plt.figure(figsize=(10, 5))
+plt.title("Hierarchical Clustering Dendrogram")
+Z = linkage(X.toarray(), method='ward')  # Compute hierarchical clustering linkage matrix
+dendrogram(Z, truncate_mode="level", p=10)  # Visualize only first few levels
+plt.show()
+
+# Display Hierarchical clustering results
+print("\n=== Hierarchical Clustering Results ===")
+print(f"Number of Clusters: {num_clusters}")
+
+-----------------------------------------------------------------------------------------------------------------
+ **PRACTICAL 8**
+
+
+**AIM**: entiment Analysis using Text Preprocessing and Machine Learning.
+
+# Import necessary libraries
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import accuracy_score, classification_report
+# Step 1: Dataset
+documents = [
+"I love this product, it is amazing",
+"This is the worst experience ever",
+"Absolutely fantastic service",
+"I am very disappointed with this item",
+"Great quality and fast delivery",
+"Terrible product, not recommended"
+]
+
+labels = [1, 0, 1, 0, 1, 0] # 1 = Positive, 0 = Negative
+
+# Step 2: Text Preprocessing using TF-IDF
+vectorizer = TfidfVectorizer(stop_words='english')
+X = vectorizer.fit_transform(documents)
+
+# Step 3: Split dataset into training and testing
+X_train, X_test, y_train, y_test = train_test_split(X, labels, test_size=0.3, random_state=42)
+
+# Step 4: Train Naive Bayes model
+model = MultinomialNB()
+model.fit(X_train, y_train)
+
+# Step 5: Make predictions
+y_pred = model.predict(X_test)
+
+# Step 6: Evaluate model
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
+# Step 7: Test with new sentence
+test_sentence = ["The product is excellent and I love it"]
+test_vector = vectorizer.transform(test_sentence)
+prediction = model.predict(test_vector)
+
+if prediction[0] == 1:
+    print("Sentiment: Positive")
+else:
+    print("Sentiment: Negative")
